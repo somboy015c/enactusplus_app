@@ -1,0 +1,80 @@
+name: Build EnactusNG Plus Android app and publish release
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: plus-android-release
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Install tools
+        run: npm install
+
+      - name: Set the Plus server address
+        run: node scripts/prepare.mjs www/assets/config.js
+        env:
+          PLUS_URL: ${{ vars.PLUS_URL }}
+
+      - name: Create the Android project
+        run: npx cap add android
+
+      - name: Generate icons and splash screen
+        run: |
+          mkdir -p assets
+          cp branding/* assets/
+          npx capacitor-assets generate --android \
+            --iconBackgroundColor '#FFF8E1' --iconBackgroundColorDark '#FFF8E1' \
+            --splashBackgroundColor '#FFF8E1' --splashBackgroundColorDark '#FFF8E1'
+
+      - name: Sync web files
+        run: npx cap sync android
+
+      - name: Build release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Sign APK
+        run: |
+          APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
+          UNSIGNED=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)
+          mkdir -p out
+          "$APKSIGNER" sign --ks signing/plus.keystore --ks-key-alias plus \
+            --ks-pass pass:enactusplus2026 --key-pass pass:enactusplus2026 \
+            --out out/EnactusNGPlus.apk "$UNSIGNED"
+          "$APKSIGNER" verify out/EnactusNGPlus.apk
+          ls -la out
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          ## EnactusNG Plus – Android app
+          - **EnactusNGPlus.apk** – install on any Android 6+ phone (allow "Install unknown apps" for your browser when asked).
+          NOTES
+          gh release create "v1.0.${{ github.run_number }}" out/EnactusNGPlus.apk \
+            --repo "${{ github.repository }}" \
+            --title "EnactusNG Plus Android v1.0.${{ github.run_number }}" \
+            --notes-file notes.md
