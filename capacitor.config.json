@@ -1,0 +1,21 @@
+{
+  "appId": "ng.enactus.plus",
+  "appName": "EnactusNG Plus",
+  "webDir": "www",
+  "backgroundColor": "#FFFBF0",
+  "server": { "androidScheme": "https" },
+  "android": {
+    "backgroundColor": "#FFFBF0",
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "force"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": true,
+      "launchShowDuration": 1500,
+      "backgroundColor": "#FFF8E1",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    }
+  }
+}
