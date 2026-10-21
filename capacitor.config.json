@@ -1,19 +1,21 @@
 {
-  "appId": "ng.enactus.plus",
-  "appName": "EnactusNG Plus",
+  "appId": "ng.enactus.admin",
+  "appName": "Enactus NG",
   "webDir": "www",
-  "backgroundColor": "#FFFBF0",
-  "server": { "androidScheme": "https" },
+  "backgroundColor": "#18130E",
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": []
+  },
   "android": {
-    "backgroundColor": "#FFFBF0",
-    "allowMixedContent": false,
-    "adjustMarginsForEdgeToEdge": "force"
+    "backgroundColor": "#18130E",
+    "allowMixedContent": false
   },
   "plugins": {
     "SplashScreen": {
       "launchAutoHide": true,
-      "launchShowDuration": 1500,
-      "backgroundColor": "#FFF8E1",
+      "launchShowDuration": 2000,
+      "backgroundColor": "#18130E",
       "showSpinner": false,
       "androidScaleType": "CENTER_CROP"
     }

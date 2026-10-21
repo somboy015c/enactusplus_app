@@ -1,0 +1,110 @@
+/* Enactus NG app shell — native-feeling splash, onboarding and connection screens */
+:root{
+  --ink:#18130E;--ink-2:#241C14;--paper:#FBF6EA;--gold:#F2A93C;--gold-deep:#C47F12;
+  --forest:#0E6B4F;--red:#B5391F;--muted:#B9AA90;
+  --ease:cubic-bezier(.2,.8,.2,1);--spring:cubic-bezier(.34,1.56,.64,1);
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0;background:var(--ink);color:#fff;overflow:hidden;
+  font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  -webkit-user-select:none;user-select:none;-webkit-font-smoothing:antialiased}
+.screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transform:scale(1.03);transition:opacity .55s var(--ease),transform .55s var(--ease),visibility 0s .55s}
+.screen.show{opacity:1;visibility:visible;transform:none;transition-delay:0s}
+
+/* ---------- Splash ---------- */
+#splash{background:var(--ink);overflow:hidden}
+#splash .bg{position:absolute;inset:0;background:var(--ink) url(img/splash-bg.jpg) center/cover no-repeat;
+  opacity:0;animation:bgIn 1.2s .1s var(--ease) forwards,kenburns 14s linear infinite alternate}
+#splash::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(24,19,14,.25),rgba(24,19,14,.9) 75%)}
+#splash .center{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:34px}
+#splash h1{margin:0;font-size:1.7rem;letter-spacing:.02em;font-weight:800;opacity:0;transform:translateY(14px);
+  animation:rise .8s .5s var(--ease) forwards}
+#splash p{margin:-24px 0 0;color:var(--muted);letter-spacing:.22em;text-transform:uppercase;font-size:.72rem;font-weight:600;
+  opacity:0;animation:rise .8s .75s var(--ease) forwards}
+#splash .bar{position:absolute;z-index:2;left:50%;bottom:calc(48px + var(--sab));width:120px;height:4px;margin-left:-60px;
+  border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden}
+#splash .bar i{display:block;height:100%;width:40%;border-radius:4px;background:var(--gold);animation:slide 1.3s var(--ease) infinite}
+@keyframes bgIn{to{opacity:.9}}
+@keyframes kenburns{from{transform:scale(1.04)}to{transform:scale(1.16) translate(-1.5%,1%)}}
+@keyframes rise{to{opacity:1;transform:none}}
+@keyframes slide{0%{transform:translateX(-110%)}100%{transform:translateX(300%)}}
+
+/* ---------- Spinner (identical to the website preloader) ---------- */
+.spinner{position:relative;width:132px;height:134px}
+.spinner .cssload-loader{position:relative;width:100%;height:100%}
+.spinner svg.static{position:absolute;top:50%;left:50%;width:60%;height:auto;transform:translate(-50%,-50%)}
+.spinner svg.spin{position:absolute;top:50%;left:50%;width:104%;height:auto;transform:translate(-50%,-50%) rotate(0deg);
+  animation:preloader-spin 1.4s linear infinite;transform-origin:center}
+@keyframes preloader-spin{from{transform:translate(-50%,-50%) rotate(0deg)}to{transform:translate(-50%,-50%) rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner svg.spin{animation:none}#splash .bg{animation:bgIn 1s forwards}}
+.spinner.sm{transform:scale(.7)}
+
+/* ---------- Buttons (ripple + lift + shine) ---------- */
+.btn{position:relative;overflow:hidden;border:0;outline:0;cursor:pointer;font:inherit;font-weight:700;letter-spacing:.01em;
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;height:54px;padding:0 30px;border-radius:999px;
+  transition:transform .25s var(--spring),box-shadow .25s var(--ease),background .25s,opacity .25s;-webkit-user-select:none;user-select:none}
+.btn:active{transform:scale(.94)}
+.btn.primary{color:var(--ink);background:linear-gradient(135deg,#FFC964,var(--gold) 55%,var(--gold-deep));
+  box-shadow:0 10px 26px -8px rgba(242,169,60,.65),inset 0 1px 0 rgba(255,255,255,.45)}
+.btn.primary:hover{transform:translateY(-2px);box-shadow:0 16px 30px -8px rgba(242,169,60,.75),inset 0 1px 0 rgba(255,255,255,.45)}
+.btn.primary:active{transform:scale(.94)}
+.btn.primary::after{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:shine 3.2s 1.2s infinite}
+@keyframes shine{0%{left:-70%}45%,100%{left:140%}}
+.btn.ghost{background:transparent;color:var(--muted);padding:0 18px;height:44px;font-weight:600}
+.btn.ghost:hover{color:#fff;background:rgba(255,255,255,.07)}
+.btn.outline{background:rgba(255,255,255,.06);color:#fff;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25)}
+.btn svg{width:20px;height:20px;transition:transform .3s var(--spring)}
+.btn:hover svg.arrow{transform:translateX(4px)}
+.ripple{position:absolute;border-radius:50%;pointer-events:none;background:rgba(255,255,255,.45);transform:scale(0);animation:ripple .65s var(--ease) forwards}
+.btn.ghost .ripple,.btn.outline .ripple{background:rgba(255,255,255,.25)}
+@keyframes ripple{to{transform:scale(1);opacity:0}}
+
+/* ---------- Onboarding ---------- */
+#onboarding{justify-content:flex-start;background:radial-gradient(ellipse at 50% 0%,#2f2418 0%,var(--ink) 62%);padding-top:var(--sat)}
+#onboarding .top{width:100%;max-width:560px;display:flex;justify-content:space-between;align-items:center;padding:14px 18px 0;min-height:62px}
+#onboarding .brandmini{display:flex;align-items:center;gap:10px;font-weight:700;font-size:.95rem}
+#onboarding .brandmini img{width:30px;height:30px}
+#viewport{flex:1;width:100%;max-width:560px;overflow:hidden;touch-action:pan-y;position:relative}
+#track{display:flex;height:100%;transition:transform .55s var(--ease);will-change:transform}
+#track.drag{transition:none}
+.slide{flex:0 0 100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 32px;text-align:center}
+.art{width:min(300px,62vw);aspect-ratio:1;position:relative;margin-bottom:26px}
+.art svg{width:100%;height:100%;overflow:visible}
+.slide h2{margin:0 0 12px;font-size:1.65rem;line-height:1.2;font-weight:800}
+.slide p{margin:0;color:var(--muted);line-height:1.6;font-size:1rem;max-width:420px}
+.slide .art,.slide h2,.slide p{opacity:0;transform:translateY(22px);transition:opacity .6s var(--ease),transform .6s var(--ease)}
+.slide.active .art{opacity:1;transform:none;transition-delay:.05s}
+.slide.active h2{opacity:1;transform:none;transition-delay:.18s}
+.slide.active p{opacity:1;transform:none;transition-delay:.3s}
+#onboarding .bottom{width:100%;max-width:560px;padding:10px 24px calc(26px + var(--sab));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dots{display:flex;gap:8px;align-items:center}
+.dot{height:8px;width:8px;border-radius:8px;background:rgba(255,255,255,.22);transition:width .45s var(--spring),background .3s}
+.dot.active{width:30px;background:var(--gold)}
+#next{min-width:150px}
+#next .label{display:inline-block;transition:opacity .2s}
+
+/* illustrations */
+.float{animation:float 4.6s ease-in-out infinite}.d1{animation-delay:-1.2s}.d2{animation-delay:-2.4s}.d3{animation-delay:-3.4s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.pulse{transform-origin:120px 120px;animation:pulse 2.8s var(--ease) infinite}.p2{animation-delay:1.4s}
+@keyframes pulse{0%{transform:scale(.55);opacity:.7}100%{transform:scale(1.25);opacity:0}}
+.orbit{transform-origin:120px 120px;animation:orbit 14s linear infinite}
+@keyframes orbit{to{transform:rotate(360deg)}}
+.counter{transform-box:fill-box;transform-origin:center;animation:orbit 14s linear infinite reverse}
+.draw{stroke-dasharray:60;stroke-dashoffset:60}
+.slide.active .draw{animation:draw 1s .8s var(--ease) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+
+/* ---------- Opening / offline ---------- */
+#opening{background:var(--ink);gap:26px}
+#opening span{color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-size:.75rem;font-weight:600}
+#offline{background:radial-gradient(ellipse at 50% 30%,#2f2418,var(--ink) 70%);padding:32px;text-align:center;gap:14px}
+#offline .icon{width:104px;height:104px;border-radius:50%;display:grid;place-items:center;background:rgba(242,169,60,.12);
+  box-shadow:0 0 0 14px rgba(242,169,60,.06);margin-bottom:12px;animation:float 3.4s ease-in-out infinite}
+#offline .icon svg{width:50px;height:50px;stroke:var(--gold)}
+#offline h2{margin:0;font-size:1.5rem}
+#offline p{margin:0 0 14px;color:var(--muted);max-width:360px;line-height:1.55}
+#offline .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
