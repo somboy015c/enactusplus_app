@@ -1,20 +1,23 @@
-# Enactus NG – Android app
+# EnactusNG Plus – Android app
 
-Wraps the Enactus admin dashboard in a native Android app (Capacitor) with an animated splash screen
-(the same spinner as the website), a 3-slide onboarding on first launch, and an offline/retry screen.
+A real app with its own screens (splash with the web spinner, 3-slide welcome, timeline, connect, messages, projects…).
+It does **not** load the website: the interface is inside the app and only the data comes from your Plus server.
 Everything is built by GitHub Actions – you never run a command.
 
 ## Set up (once, in the browser only)
-1. Create a **private** GitHub repository and upload the *contents* of this folder (unzip first; make sure the `.github` folder is included).
-2. Open `app.config.json` on GitHub → ✏️ edit → check that `"adminUrl"` is `https://admin.enactus.org.ng` → Commit only if you change it.
-3. Open the **Actions** tab. The build starts automatically on every commit (or press *Run workflow*). It takes about 8–12 minutes.
-4. When it finishes, open **Releases**: **EnactusNG.apk** is attached. Download it on the phone and install.
+1. Create a **private** GitHub repository and upload the *contents* of this folder (include the hidden `.github` folder).
+2. Open `app.config.json`: `plusUrl` is `https://plus.enactus.org.ng`. Change it only if your Plus address is different.
+3. Open the **Actions** tab – the build starts automatically (about 8–12 minutes).
+4. Open **Releases**: **EnactusNGPlus.apk**.
 
 ## Customising
-- Splash background: replace `www/img/splash-bg.jpg` (same file name). App icon / native splash: replace the PNGs in `branding/`.
-- Onboarding text: `www/index.html` (search for `<h2>`).
-- Colours / buttons: `www/style.css`.
+- Splash background: `www/assets/img/splash-bg.jpg`. App icon / native splash: PNGs in `branding/`. Colours and buttons: `www/assets/native.css`.
+- Welcome slides: `www/index.html` (search for `b-slide`).
+- When you update `app.js` / `plus.css` on the website, copy the new files into `www/assets/`.
 
 ## Notes
-- Keep the repository **private**: `signing/enactus.keystore` is the key that signs your APK. Every release uses the same key, so new versions install over old ones.
-- The dashboard is a live PHP site, so the app needs an internet connection.
+- Keep the repository **private**: `signing/plus.keystore` signs your APK (same key every release, so updates install over old versions).
+
+## Icon, logo and welcome slides
+- The app icon, splash and logo were made from your uploaded Plus favicon and logo. To change them replace `branding/*.png` and `www/assets/img/logo.png` / `favicon.png`.
+- The 3 welcome slides load **live from your server** (Site settings → EnactusNG Plus → sign-in slides: picture, headline, text), so changing them on the website changes the app. If the phone is offline on first launch, built-in illustrations are shown instead.
