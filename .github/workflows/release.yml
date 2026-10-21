@@ -1,4 +1,4 @@
-name: Build Android app and publish release
+name: Build EnactusNG Plus Android app and publish release
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-release
+  group: plus-android-release
   cancel-in-progress: true
 
 jobs:
@@ -30,10 +30,10 @@ jobs:
       - name: Install tools
         run: npm install
 
-      - name: Set the dashboard address
-        run: node scripts/prepare.mjs www
+      - name: Set the Plus server address
+        run: node scripts/prepare.mjs www/assets/config.js
         env:
-          ADMIN_URL: ${{ vars.ADMIN_URL }}
+          PLUS_URL: ${{ vars.PLUS_URL }}
 
       - name: Create the Android project
         run: npx cap add android
@@ -43,20 +43,11 @@ jobs:
           mkdir -p assets
           cp branding/* assets/
           npx capacitor-assets generate --android \
-            --iconBackgroundColor '#18130E' --iconBackgroundColorDark '#18130E' \
-            --splashBackgroundColor '#18130E' --splashBackgroundColorDark '#18130E'
+            --iconBackgroundColor '#FFF8E1' --iconBackgroundColorDark '#FFF8E1' \
+            --splashBackgroundColor '#FFF8E1' --splashBackgroundColorDark '#FFF8E1'
 
       - name: Sync web files
         run: npx cap sync android
-
-      - name: Hide the "View website" link inside the app
-        run: |
-          ORIGIN=$(node -e "const c=require('./capacitor.config.json');console.log('https://'+c.server.allowNavigation[0])")
-          mkdir -p android/app/src/main/assets android/app/src/main/java/ng/enactus/admin
-          cp inject.js android/app/src/main/assets/inject.js
-          sed "s#__ORIGIN__#$ORIGIN#" android-patch/MainActivity.java > android/app/src/main/java/ng/enactus/admin/MainActivity.java
-          sed -i '0,/^dependencies {/s//dependencies {\n    implementation "androidx.webkit:webkit:1.12.1"/' android/app/build.gradle
-          grep -q "androidx.webkit" android/app/build.gradle
 
       - name: Build release APK
         working-directory: android
@@ -69,10 +60,10 @@ jobs:
           APKSIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)
           UNSIGNED=$(find android/app/build/outputs/apk/release -name '*.apk' | head -n 1)
           mkdir -p out
-          "$APKSIGNER" sign --ks signing/enactus.keystore --ks-key-alias enactus \
-            --ks-pass pass:enactusng2026 --key-pass pass:enactusng2026 \
-            --out out/EnactusNG.apk "$UNSIGNED"
-          "$APKSIGNER" verify out/EnactusNG.apk
+          "$APKSIGNER" sign --ks signing/plus.keystore --ks-key-alias plus \
+            --ks-pass pass:enactusplus2026 --key-pass pass:enactusplus2026 \
+            --out out/EnactusNGPlus.apk "$UNSIGNED"
+          "$APKSIGNER" verify out/EnactusNGPlus.apk
           ls -la out
 
       - name: Publish release
@@ -80,10 +71,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cat > notes.md <<'NOTES'
-          ## Enactus NG – Android app
-          - **EnactusNG.apk** – install on any Android 6+ phone (allow "Install unknown apps" for your browser when asked).
+          ## EnactusNG Plus – Android app
+          - **EnactusNGPlus.apk** – install on any Android 6+ phone (allow "Install unknown apps" for your browser when asked).
           NOTES
-          gh release create "v1.0.${{ github.run_number }}" out/EnactusNG.apk \
+          gh release create "v1.0.${{ github.run_number }}" out/EnactusNGPlus.apk \
             --repo "${{ github.repository }}" \
-            --title "Enactus NG Android v1.0.${{ github.run_number }}" \
+            --title "EnactusNG Plus Android v1.0.${{ github.run_number }}" \
             --notes-file notes.md
