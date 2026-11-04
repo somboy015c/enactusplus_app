@@ -38,7 +38,7 @@
     search: 'M11 4a7 7 0 100 14 7 7 0 000-14zM21 21l-4.3-4.3',
     chat: 'M21 12a8 8 0 01-11.6 7.1L4 20l1-4.6A8 8 0 1121 12z', mail: 'M3 6h18v12H3zM3 7l9 7 9-7', download: 'M12 3v12M7 11l5 5 5-5M5 21h14', inbox: 'M3 13l3-8h12l3 8v6H3zM3 13h5l1 3h6l1-3h5', gift: 'M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 110-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 100-5C13 2 12 7 12 7z', megaphone: 'M3 11v3a1 1 0 001 1h2l5 4V6L6 10H4a1 1 0 00-1 1zM15 9a4 4 0 010 6M18 6a8 8 0 010 12', bell: 'M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0',
     brief: 'M3 8h18v12H3zM8 8V5h8v3M3 13h18', folder: 'M3 6h6l2 2h10v11H3z', cal: 'M4 7h16v13H4zM4 11h16M8 3v4M16 3v4',
-    project: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5', image: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M9 9h.01', file: 'M7 3h8l4 4v14H7zM15 3v4h4M10 13h6M10 17h6',
+    project: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5', image: 'M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M9 9h.01', video: 'M3 6h12v12H3zM15 10l6-3v10l-6-3', plus: 'M12 5v14M5 12h14', file: 'M7 3h8l4 4v14H7zM15 3v4h4M10 13h6M10 17h6',
     heart: 'M12 21s-8-5.3-8-11a4.5 4.5 0 018-2.8A4.5 4.5 0 0120 10c0 5.7-8 11-8 11z', comment: 'M21 15a3 3 0 01-3 3H8l-5 4V6a3 3 0 013-3h12a3 3 0 013 3z',
     trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3', logout: 'M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9',
     plus: 'M12 5v14M5 12h14', edit: 'M4 20h4L19 9l-4-4L4 16zM13 7l4 4', hub: 'M3 21h18M5 21V9l7-5 7 5v12M9 21v-6h6v6', user: 'M12 12a4 4 0 100-8 4 4 0 000 8zM4 21c0-4 4-6 8-6s8 2 8 6'
@@ -90,6 +90,18 @@
     var a = h('span', { class: 'avatar ' + (cls || '') + (p && p.photo ? ' has-img' : '') });
     if (p && p.photo) a.appendChild(h('img', { src: p.photo, alt: '', loading: 'lazy' }));
     else a.textContent = ((p && p.name) || '?').charAt(0).toUpperCase();
+    return a;
+  }
+  /* Message button; looks switched off when the person has turned private chat off (staff can still message anyone) */
+  function msgBtn(p, cls, label) {
+    var off = !!(p && p.dm_off);
+    return h('button', { class: (cls || 'btn btn-ghost btn-sm') + (off ? ' is-off' : ''), type: 'button', text: label || 'Message', 'aria-disabled': off ? 'true' : null, title: off ? 'This person has turned off private chat' : null,
+      onclick: function () { if (off) { toast('This person has turned off private chat.', 'info'); return; } messageUser(p.id); } });
+  }
+  /* big picture that opens full-size when clicked */
+  function zoomAvatar(p, cls) {
+    var a = avatar(p, cls);
+    if (p && p.photo) { a.classList.add('zoomable'); a.setAttribute('role', 'button'); a.setAttribute('tabindex', '0'); a.setAttribute('aria-label', 'View picture'); a.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); lightbox(p.photo); }); a.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); lightbox(p.photo); } }); }
     return a;
   }
   function busy(btn, on) { if (!btn) return; btn.classList.toggle('is-loading', on); btn.disabled = !!on; }
@@ -193,7 +205,7 @@
     var pop = h('div', { class: 'app-pop', hidden: true, role: 'menu' }, h('strong', { class: 'app-pop-h', text: 'Get the app' }), list.map(function (d) {
       return h('a', { class: 'app-pop-i dl-' + d.group, role: 'menuitem', href: d.url, target: '_self', onclick: function (e) { e.preventDefault(); window.location.href = d.url; } }, dlIcon(d.kind), h('span', null, h('b', { text: d.label }), h('small', { text: d.note || '' })));
     }));
-    var btn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Get the app', title: 'Get the app', 'aria-haspopup': 'true' }, icon('download'));
+    var btn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Get the app', title: 'Get the app', 'aria-haspopup': 'true' }, (function () { var m = list.filter(function (d) { return d.group === 'mobile'; }), an = m.filter(function (d) { return d.kind === 'android'; })[0]; return an ? dlIcon('android') : icon('download'); })());
     var box = h('div', { class: 'app-menu' }, btn, pop);
     function close() { pop.hidden = true; document.removeEventListener('click', away, true); }
     function away(e) { if (!box.contains(e.target)) close(); }
@@ -223,7 +235,7 @@
       });
     } }, err, h('div', { class: 'field' }, h('label', { for: 'l-email', text: 'Enactus ID or email' }), email), pw.el, btn);
     var pub = S.pub || {};
-    authShell(h('div', { class: 'auth-box' }, pub.logo ? h('img', { class: 'logo', src: pub.logo, alt: (pub.app && pub.app.name) || pub.name || '' }) : null,
+    authShell(h('div', { class: 'auth-box' },
       h('h1', { text: 'Welcome back' }), h('p', { text: pub.tagline || 'Sign in to the Enactus Nigeria network.' }), form,
       h('div', { class: 'auth-links' }, h('a', { href: '#/forgot', text: 'Forgot your password?' }), pub.website ? h('a', { href: pub.website, text: 'Visit the website' }) : null),
       appDownload(false)
@@ -507,7 +519,7 @@
     else if (p.relation === 'sent') btns.appendChild(h('button', { class: 'btn btn-ghost btn-sm', disabled: true, text: 'Request sent' }));
     else if (p.relation === 'received') { var a = h('button', { class: 'btn btn-primary btn-sm', type: 'button', text: 'Accept' }); a.addEventListener('click', function () { busy(a, true); api('connection/respond', { data: { id: p.connection_id, action: 'accept' } }).then(function (d) { busy(a, false); if (d.ok) { a.textContent = 'Connected'; a.disabled = true; refreshCounts(); } }); }); btns.appendChild(a); }
     else btns.appendChild(h('span', { class: 'badge badge-green', text: 'Connected' }));
-    btns.appendChild(h('button', { class: 'btn btn-ghost btn-sm msg-btn', type: 'button', text: 'Message', onclick: function () { messageUser(p.id); } }));
+    btns.appendChild(msgBtn(p, 'btn btn-ghost btn-sm msg-btn'));
     if (p.kind === 'team') {
       return clickable(h('article', { class: 'person is-team' }, h('div', { class: 'team-band' + (p.cover ? ' has-cover' : ''), style: p.cover ? 'background-image:url("' + String(p.cover).replace(/"/g, '%22') + '")' : '' }, h('span', { class: 'team-tag', text: 'TEAM' })),
         h('div', { class: 'team-logo' }, avatar(p, 'lg')), h('div', { class: 'pbody' }, h('h3', { text: p.name }), p.headline ? h('span', { class: 'headline', text: p.headline }) : null, h('small', { class: 'muted', text: 'Enactus campus team' })), btns), p);
@@ -525,7 +537,7 @@
     main.appendChild(connectTabs(sub)); paintCounts();
     if (sub === '') {
       var q = h('input', { type: 'search', placeholder: 'Search people by name or headline…', 'aria-label': 'Search people' });
-      var kind = h('select', { 'aria-label': 'Type' }, h('option', { value: '', text: 'Everyone' }), ['team:Enactus Teams', 'member:Members', 'alumni:Alumni', 'advisor:Academic advisors', 'partner:Partners', 'staff:Staff'].filter(function (k) { var v = k.split(':')[0], me = S.user || {}; if (me.kind === 'partner') return v === 'staff'; if (v === 'partner') return !!me.is_admin; if (v === 'team') return !!me.is_staff; return true; }).map(function (k) { var p = k.split(':'); return h('option', { value: p[0], text: p[1] }); }));
+      var kind = h('select', { 'aria-label': 'Type' }, h('option', { value: '', text: 'Everyone' }), ['team:Enactus Teams', 'member:Members', 'alumni:Alumni', 'advisor:Academic advisors', 'partner:Partners', 'staff:Staff'].filter(function (k) { var v = k.split(':')[0], me = S.user || {}; if (me.kind === 'partner') return v === 'staff'; if (v === 'partner') return !!me.is_admin; return true; }).map(function (k) { var p = k.split(':'); return h('option', { value: p[0], text: p[1] }); }));
       var team = h('select', { 'aria-label': 'Team' }, h('option', { value: '', text: 'All teams' }));
       var grid = h('div', { class: 'people-grid' }), more = h('div', { class: 'load-more' }); var page = 1, tmr = null, filled = false;
       main.appendChild(h('div', { class: 'search-row' }, q, kind, team)); main.appendChild(grid); main.appendChild(more);
@@ -569,7 +581,7 @@
             rows(d.outgoing, function (p) { var c = h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Cancel' }); c.addEventListener('click', function () { respond(p, 'cancel', c); }); return [c]; }).forEach(function (n) { box.appendChild(n); });
           } else {
             if (!d.friends.length) box.appendChild(h('div', { class: 'card center' }, h('h2', { text: 'No connections yet' }), h('p', { class: 'muted', text: 'Find people in Discover and send a request.' })));
-            rows(d.friends, function (p) { var m = h('button', { class: 'btn btn-primary btn-sm', type: 'button', text: 'Message', onclick: function () { messageUser(p.id); } }), r = h('button', { class: 'btn btn-quiet btn-sm', type: 'button', text: 'Remove' }); r.addEventListener('click', function () { if (confirm('Remove ' + p.name + ' from your connections?')) respond(p, 'remove', r); }); return [m, r]; }).forEach(function (n) { box.appendChild(n); });
+            rows(d.friends, function (p) { var m = msgBtn(p, 'btn btn-primary btn-sm'), r = h('button', { class: 'btn btn-quiet btn-sm', type: 'button', text: 'Remove' }); r.addEventListener('click', function () { if (confirm('Remove ' + p.name + ' from your connections?')) respond(p, 'remove', r); }); return [m, r]; }).forEach(function (n) { box.appendChild(n); });
           }
         });
       };
@@ -650,7 +662,7 @@
         d.members.forEach(function (m) { members[m.id] = true; });
         box.appendChild(h('a', { href: '#/messages', class: 'small', text: '← Back to messages' }));
         box.appendChild(h('div', { class: 'page-h', style: 'margin-top:8px' }, h('div', { class: 'gp-head' }, avatar({ name: g.name, photo: g.photo }, 'xl'), h('div', null, h('h1', { text: g.name }), g.description ? h('p', { class: 'muted', text: g.description }) : null, g.is_admin ? groupPhotoControl(g, render) : null)),
-          h('div', { class: 'btns', style: 'display:flex;gap:8px' }, h('a', { class: 'btn btn-primary btn-sm', href: '#/messages/' + g.id, text: 'Open chat' }),
+          h('div', { class: 'btns', style: 'display:flex;gap:8px' }, h('a', { class: 'btn btn-primary btn-sm', href: '#/messages/' + g.id, text: 'Open chat' }), h('a', { class: 'btn btn-ghost btn-sm', href: '#/messages/' + g.id + '/memories' }, icon('image'), ' Memories'),
             (g.staff_made || g.is_creator) ? null : h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '⚑ Report', onclick: function () { reportSheet(g.id, g.name); } }),
             h('button', { class: 'btn btn-danger btn-sm', type: 'button', text: 'Leave', onclick: function () { if (confirm('Leave “' + g.name + '”?')) { api('group/leave', { data: { room: g.id } }).then(function () { location.hash = '#/groups'; }); } } }))));
         // invite
@@ -673,8 +685,12 @@
         box.appendChild(h('div', { class: 'form-card' }, h('h2', { text: 'Invite people' }), h('p', { class: 'muted small', style: 'margin-bottom:10px', text: 'They will get a request and can join or decline.' }), q, res));
         box.appendChild(h('h2', { class: 'sect-h', text: 'Members (' + d.members.length + ')' }));
         d.members.forEach(function (m) {
-          var rm = (g.is_admin && m.id !== S.user.id && !m.is_admin) ? h('button', { class: 'btn btn-quiet btn-sm', type: 'button', text: 'Remove', onclick: function () { if (confirm('Remove ' + m.name + ' from the group?')) { api('group/remove', { data: { room: g.id, user: m.id } }).then(render); } } }) : null;
-          box.appendChild(h('div', { class: 'row-card' }, avatar(m), h('div', { class: 'who' }, h('strong', { text: m.name }), h('small', { text: (m.is_admin ? 'Admin · ' : '') + (m.headline || m.team || m.kind_label) })), rm));
+          var isCreator = m.id === g.creator, mine = m.id === S.user.id, acts = h('div', { class: 'btns', style: 'display:flex;gap:6px;flex-wrap:wrap' });
+          if (g.is_admin && !isCreator && !mine) {
+            acts.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: m.is_admin ? 'Remove admin' : 'Make admin', onclick: function (e) { var b = e.currentTarget; busy(b, true); api('group/admin', { data: { room: g.id, user: m.id, on: m.is_admin ? 0 : 1 } }).then(function (x) { if (x.ok) { toast(m.is_admin ? m.name + ' is no longer an admin.' : m.name + ' is now an admin.', 'ok'); render(); } else { busy(b, false); toast(x.error || 'Could not change that.', 'error'); } }); } }));
+            acts.appendChild(h('button', { class: 'btn btn-quiet btn-sm', type: 'button', text: 'Remove', onclick: function () { if (confirm('Remove ' + m.name + ' from the group?')) { api('group/remove', { data: { room: g.id, user: m.id } }).then(function (x) { if (x.ok) render(); else toast(x.error || 'Could not remove.', 'error'); }); } } }));
+          }
+          box.appendChild(h('div', { class: 'row-card' }, avatar(m), h('div', { class: 'who' }, h('strong', { text: m.name }), h('small', { text: (isCreator ? 'Creator · ' : (m.is_admin ? 'Admin · ' : '')) + (m.headline || m.team || m.kind_label) })), acts));
         });
         if (d.pending && d.pending.length) {
           box.appendChild(h('h2', { class: 'sect-h', text: 'Waiting for a reply' }));
@@ -683,6 +699,148 @@
       });
     }
     render();
+  }
+
+  /* ---------------------------------------------------------------- group memories */
+  /* full-screen viewer for pictures / videos with previous + next (arrows, keyboard, swipe) */
+  function mediaViewer(items, start) {
+    if (!items.length) return;
+    var i = Math.max(0, Math.min(start || 0, items.length - 1)), n = items.length;
+    var stage = h('div', { class: 'mv-stage' }), count = h('span', { class: 'mv-count' }), cap = h('p', { class: 'mv-cap' });
+    var prev = h('button', { type: 'button', class: 'mv-nav mv-prev', 'aria-label': 'Previous', text: '‹' }), next = h('button', { type: 'button', class: 'mv-nav mv-next', 'aria-label': 'Next', text: '›' });
+    var fs = h('button', { type: 'button', class: 'mv-btn', 'aria-label': 'Full screen', title: 'Full screen', text: '⛶' }), cl = h('button', { type: 'button', class: 'mv-btn mv-close', 'aria-label': 'Close', text: '×' });
+    var ov = h('div', { class: 'mv-viewer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Memories viewer' }, h('div', { class: 'mv-top' }, count, h('span', { class: 'mv-top-r' }, fs, cl)), prev, stage, next, cap);
+    function show() {
+      clear(stage); var it = items[i];
+      if (it.mode === 'img') stage.appendChild(h('img', { src: it.src, alt: it.caption || '', 'data-nozoom': '1' }));
+      else if (it.mode === 'video') stage.appendChild(h('video', { src: it.src, controls: true, autoplay: true, playsinline: true }));
+      else if (it.mode === 'frame') stage.appendChild(h('iframe', { src: it.src, allow: 'autoplay; fullscreen; picture-in-picture', allowfullscreen: true, title: it.caption || 'Video' }));
+      else stage.appendChild(h('div', { class: 'mv-ext' }, h('p', { text: 'This video opens on its own website.' }), h('a', { class: 'btn btn-primary', href: it.src, target: '_blank', rel: 'noopener noreferrer', text: 'Open video ↗' })));
+      count.textContent = (i + 1) + ' / ' + n; cap.textContent = it.caption || '';
+      prev.style.display = next.style.display = n < 2 ? 'none' : '';
+    }
+    function go(d) { i = (i + d + n) % n; show(); }
+    function close() { document.removeEventListener('keydown', key, true); try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) { /* ignore */ } ov.remove(); }
+    function key(e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } else if (e.key === 'ArrowLeft') { go(-1); } else if (e.key === 'ArrowRight') { go(1); } }
+    prev.addEventListener('click', function () { go(-1); }); next.addEventListener('click', function () { go(1); }); cl.addEventListener('click', close);
+    fs.addEventListener('click', function () { try { if (document.fullscreenElement) document.exitFullscreen(); else if (ov.requestFullscreen) ov.requestFullscreen(); } catch (e) { /* ignore */ } });
+    var x0 = null;
+    stage.addEventListener('touchstart', function (e) { x0 = e.touches.length === 1 ? e.touches[0].clientX : null; }, { passive: true });
+    stage.addEventListener('touchend', function (e) { if (x0 === null) return; var dx = (e.changedTouches[0].clientX - x0); x0 = null; if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1); }, { passive: true });
+    ov.addEventListener('click', function (e) { if (e.target === ov || e.target === stage) close(); });
+    document.addEventListener('keydown', key, true);
+    document.body.appendChild(ov); show();
+  }
+
+  function openMemories(r, pane, backFn) {
+    clear(pane);
+    var body = h('div', { class: 'mem' });
+    pane.appendChild(h('div', { class: 'chat-head' }, r.photo ? avatar({ name: r.title, photo: r.photo }, 'sm') : h('span', { class: 'avatar sm hash', text: '#' }), h('div', { class: 't' }, h('h2', { text: 'Memories' }), h('small', { class: 'muted', text: r.title })),
+      h('div', { class: 'chat-acts' }, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: backFn }, icon('chat'), ' Chat'))));
+    pane.appendChild(body);
+    function listView() {
+      clear(body); body.appendChild(h('div', { class: 'spinner' }));
+      api('memories', { params: { room: r.id } }).then(function (d) {
+        clear(body);
+        if (!d.ok) { body.appendChild(h('p', { class: 'muted', text: d.error || 'Could not load memories.' })); return; }
+        var top = h('div', { class: 'mem-top' }, h('div', null, h('h3', { text: 'Our memories' }), h('p', { class: 'muted small', text: 'Pictures and videos from the things this group has done together.' })));
+        if (d.is_admin) top.appendChild(h('button', { class: 'btn btn-primary btn-sm', type: 'button', text: '+ New memory', onclick: function () { formView(null); } }));
+        body.appendChild(top);
+        if (!d.memories.length) { body.appendChild(h('div', { class: 'card center', text: d.is_admin ? 'No memories yet. Create one, for example “2024 Nationals”, then add links to its pictures and videos.' : 'No memories have been added yet.' })); return; }
+        var grid = h('div', { class: 'mem-grid' });
+        d.memories.forEach(function (m) {
+          var cover = h('div', { class: 'mem-cover' + (m.cover ? '' : ' none') });
+          if (m.cover) cover.appendChild(h('img', { src: m.cover, alt: '', loading: 'lazy', 'data-nozoom': '1' })); else cover.appendChild(icon('image'));
+          var card = h('button', { type: 'button', class: 'mem-card', onclick: function () { eventView(m.id); } }, cover,
+            h('div', { class: 'mem-meta' }, h('strong', { text: m.title }), m.when ? h('small', { text: m.when }) : null, h('span', { class: 'mem-counts' }, h('b', { text: m.images + (m.images === 1 ? ' picture' : ' pictures') }), h('b', { text: m.videos + (m.videos === 1 ? ' video' : ' videos') }))));
+          grid.appendChild(card);
+        });
+        body.appendChild(grid);
+      });
+    }
+    function formView(m) {
+      clear(body);
+      var title = h('input', { type: 'text', maxlength: '150', required: true, value: m ? m.title : '', placeholder: 'e.g. 2024 Nationals' });
+      var when = h('input', { type: 'text', maxlength: '60', value: m && m.when ? m.when : '', placeholder: 'e.g. August 2024, Abuja (optional)' });
+      var desc = h('textarea', { rows: '3', maxlength: '500', placeholder: 'A line about this event (optional)' }); desc.value = m && m.description ? m.description : '';
+      var fu = h('input', { type: 'url', maxlength: '500', value: m && m.folder_url ? m.folder_url : '', placeholder: 'SharePoint / OneDrive, Google Drive or Dropbox folder link' });
+      var btn = h('button', { class: 'btn btn-primary', type: 'submit', text: m ? 'Save' : 'Create memory' });
+      body.appendChild(h('form', { class: 'form-card', onsubmit: function (e) {
+        e.preventDefault(); busy(btn, true);
+        api('memory/save', { data: { id: m ? m.id : 0, room: r.id, title: title.value, when: when.value, description: desc.value, folder_url: fu.value } }).then(function (x) {
+          busy(btn, false); if (!x.ok) { toast(x.error || 'Could not save.', 'error'); return; } eventView(x.id, null, x.sync || 'Saved.');
+        });
+      } }, h('h3', { text: m ? 'Edit memory' : 'New memory' }), field('Name', title), field('When / where', when), field('About', desc),
+        field('Main folder link', fu, 'Optional. SharePoint / OneDrive, Google Drive or Dropbox folders only. Share the folder, paste its link, and the system reads every picture and video inside it (sub-folders too) and shows them here. Members need nothing: they just open Memories.'),
+        h('div', { class: 'btns', style: 'display:flex;gap:8px' }, btn, h('button', { class: 'btn btn-ghost', type: 'button', text: 'Cancel', onclick: function () { if (m) eventView(m.id); else listView(); } }))));
+    }
+    function eventView(id, tab, banner) {
+      clear(body); body.appendChild(h('div', { class: 'spinner' }));
+      api('memory', { params: { id: id } }).then(function (d) {
+        clear(body);
+        if (!d.ok) { body.appendChild(h('p', { class: 'muted', text: d.error || 'Not found.' })); body.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: '← All memories', onclick: listView })); return; }
+        var m = d.memory, cur = tab || (m.images || !m.videos ? 'image' : 'video');
+        body.appendChild(h('button', { class: 'linklike small', type: 'button', text: '← All memories', onclick: listView }));
+        var head = h('div', { class: 'mem-top' }, h('div', null, h('h3', { text: m.title }), m.when ? h('p', { class: 'muted small', text: m.when }) : null, m.description ? h('p', { text: m.description }) : null));
+        if (m.can_edit) head.appendChild(h('div', { class: 'btns', style: 'display:flex;gap:6px' }, h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Edit', onclick: function () { formView(m); } }),
+          h('button', { class: 'btn btn-quiet btn-sm', type: 'button', text: 'Delete', onclick: function () { if (confirm('Delete “' + m.title + '” and all its links?')) api('memory/delete', { data: { id: m.id } }).then(function (x) { if (x.ok) listView(); else toast(x.error, 'error'); }); } })));
+        body.appendChild(head);
+        if (banner) body.appendChild(h('div', { class: 'mem-banner ok', role: 'status' }, icon('image'), ' ' + banner));
+        var tabs = h('div', { class: 'mem-tabs', role: 'tablist' }), pane2 = h('div');
+        [['image', 'Pictures', m.images], ['video', 'Videos', m.videos]].forEach(function (t) {
+          tabs.appendChild(h('button', { type: 'button', role: 'tab', class: 'mem-tab' + (cur === t[0] ? ' on' : ''), 'aria-selected': cur === t[0] ? 'true' : 'false', text: t[1] + ' (' + t[2] + ')', onclick: function () { eventView(id, t[0]); } }));
+        });
+        body.appendChild(tabs); body.appendChild(pane2);
+        var folder = m.folder_url || (cur === 'image' ? m.folder_image : m.folder_video);
+        var frow = h('p', { style: 'margin:0 0 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center' });
+        if (m.folder_url && m.can_edit) { var rf = h('button', { class: 'btn btn-soft btn-sm', type: 'button', text: '↻ Refresh from folder' }); rf.addEventListener('click', function () { busy(rf, true); api('memory/sync', { data: { id: m.id } }).then(function (x) { busy(rf, false); if (x.ok) { eventView(id, cur, x.message); } else { toast(x.error || x.message || 'Could not read the folder.', 'error'); eventView(id, cur); } }); }); frow.appendChild(rf); }
+        if (folder) frow.appendChild(h('a', { class: 'btn btn-ghost btn-sm', href: folder, target: '_blank', rel: 'noopener noreferrer', text: 'Open original folder ↗' }));
+        if (frow.children.length) pane2.appendChild(frow);
+        if (m.sync_note && m.can_edit) pane2.appendChild(h('div', { class: 'card', style: 'border-left:4px solid #ED341C;margin-bottom:12px' }, h('strong', { text: 'The folder could not be read' }), h('p', { class: 'small', style: 'margin:4px 0 0', text: m.sync_note })));
+        var list = d.items.filter(function (it) { return it.type === cur; });
+        if (!list.length) pane2.appendChild(h('div', { class: 'card center', text: 'Nothing here yet.' }));
+        var grid = h('div', { class: 'mem-thumbs' });
+        function addCell(it, idx) {
+          var th = h('button', { type: 'button', class: 'mem-th' + (cur === 'video' ? ' is-video' : ''), 'aria-label': (cur === 'video' ? 'Play video ' : 'View picture ') + (idx + 1), onclick: function () { mediaViewer(list, idx); } });
+          if (it.thumb) { var im = h('img', { src: it.thumb, alt: it.caption || '', loading: 'lazy', 'data-nozoom': '1', referrerpolicy: 'no-referrer' }); im.addEventListener('error', function () { im.remove(); th.insertBefore(h('span', { class: 'mem-th-ph' }, icon(cur === 'video' ? 'video' : 'image')), th.firstChild); }); th.appendChild(im); } else th.appendChild(h('span', { class: 'mem-th-ph' }, icon(cur === 'video' ? 'video' : 'image')));
+          if (cur === 'video') th.appendChild(h('i', { class: 'mem-play', 'aria-hidden': 'true', text: '▶' }));
+          var cell = h('div', { class: 'mem-cell' }, th);
+          if (m.can_edit) cell.appendChild(h('button', { type: 'button', class: 'mem-del', 'aria-label': 'Remove', title: 'Remove', text: '×', onclick: function () { if (confirm('Remove this ' + (cur === 'video' ? 'video' : 'picture') + ' from the memory?')) api('memory/item/delete', { data: { id: it.id } }).then(function (x) { if (x.ok) eventView(id, cur); else toast(x.error, 'error'); }); } }));
+          grid.appendChild(cell);
+        }
+        var BATCH = 36, shown = 0, loadingMore = false, sentinel = h('div', { class: 'mem-sentinel', 'aria-hidden': 'true' });
+        function renderMore() {
+          if (loadingMore || shown >= list.length) return; loadingMore = true;
+          var end = Math.min(list.length, shown + BATCH);
+          for (; shown < end; shown++) addCell(list[shown], shown);
+          loadingMore = false;
+          if (shown >= list.length) { sentinel.remove(); if (obs) obs.disconnect(); }
+        }
+        var obs = 'IntersectionObserver' in window ? new IntersectionObserver(function (es) { if (es[0].isIntersecting) renderMore(); }, { root: null, rootMargin: '600px 0px' }) : null;
+        renderMore();
+        pane2.appendChild(grid);
+        if (shown < list.length) { pane2.appendChild(sentinel); if (obs) obs.observe(sentinel); else { while (shown < list.length) renderMore(); } }
+        if (m.can_edit) {
+          var type = h('select', { 'aria-label': 'Type of content' }, h('option', { value: 'image', text: 'Pictures' }), h('option', { value: 'video', text: 'Videos' })); type.value = cur;
+          var links = h('textarea', { rows: '4', placeholder: 'Paste links, one per line (https://…)', required: true }), cap = h('input', { type: 'text', maxlength: '200', placeholder: 'Caption for these (optional)' });
+          var add = h('button', { class: 'btn btn-primary', type: 'submit', text: 'Add' });
+          var panel = h('form', { class: 'form-card mem-add', onsubmit: function (e) {
+            e.preventDefault(); busy(add, true);
+            api('memory/add', { data: { memory: m.id, type: type.value, links: links.value, caption: cap.value } }).then(function (x) {
+              busy(add, false); if (!x.ok) { toast(x.error || 'Could not add.', 'error'); return; }
+              eventView(id, type.value, x.added + ' added' + (x.skipped ? ' · ' + x.skipped + ' skipped' : '') + '.');
+            });
+          } }, h('h4', { text: 'Add more pictures or videos' }), field('What are you adding?', type), field('Links', links, 'One link per line to single pictures or videos (SharePoint / OneDrive, Google Drive or Dropbox files, YouTube, Vimeo, or direct links). For a whole folder, use Edit and change the Main folder link.'), field('Caption', cap),
+            h('div', { class: 'btns', style: 'display:flex;gap:8px' }, add, h('button', { class: 'btn btn-ghost', type: 'button', text: 'Cancel', onclick: function () { panel.hidden = true; addBtn.hidden = false; } })));
+          panel.hidden = true;
+          var addBtn = h('button', { class: 'btn btn-soft btn-sm', type: 'button', onclick: function () { panel.hidden = false; addBtn.hidden = true; links.focus(); } }, icon('plus'), ' Add more pictures or videos');
+          if (!d.items.length && !m.folder_url) { panel.hidden = false; addBtn.hidden = true; }
+          frow.appendChild(addBtn); if (!frow.parentNode) pane2.insertBefore(frow, pane2.firstChild);
+          pane2.insertBefore(panel, frow.nextSibling);
+        }
+      });
+    }
+    listView();
   }
 
   /* ---------------------------------------------------------------- messages */
@@ -762,7 +920,7 @@
   }
   var stopConf = null;
 
-  function viewMessages(roomId) {
+  function viewMessages(roomId, memFlag) {
     roomId = roomId ? parseInt(roomId, 10) : 0;
     var main = shell('messages', false);
     var wrap = h('div', { class: 'chat-shell' + (roomId ? ' has-room' : '') });
@@ -805,7 +963,7 @@
         });
       } }, field('Channel picture (optional)', chImg, 'Cropped to a square automatically.'), field('Name', name), field('Description (optional)', desc), h('div', { class: 'field' }, h('label', { text: 'Add whole categories of users' }), h('div', { class: 'check-grid' }, boxes), h('p', { class: 'help', text: 'Everyone in a ticked category, including people who join later, can see the channel.' })), field('Who can post?', posting), btn));
     }
-    function openRoom(id) {
+    function openRoom(id, startMem) {
       clear(pane);
       var log = h('div', { class: 'chat-log', 'aria-live': 'polite' }), last = 0;
       var head = h('div', { class: 'chat-head' }, h('div', { class: 't' }, h('h2', { text: 'Loading…' })), h('a', { class: 'chat-back', href: '#/messages', 'aria-label': 'Back', text: '✕' }));
@@ -825,6 +983,7 @@
           });
           acts.appendChild(blk);
         }
+        if (r.kind !== 'dm') acts.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', onclick: function () { clearTimers(); every(15000, loadRooms); openMemories(r, pane, function () { openRoom(id); }); } }, icon('image'), ' Memories'));
         if (r.kind === 'circle') acts.appendChild(h('a', { class: 'btn btn-ghost btn-sm', href: '#/groups/' + r.id, text: 'Members' }));
         if (r.kind !== 'dm' && !r.staff_made && !r.is_creator) acts.appendChild(h('button', { class: 'btn btn-quiet report-btn', type: 'button', title: 'Report this group', 'aria-label': 'Report this group', text: '⚑ Report', onclick: function () { reportSheet(r.id, r.title); } }));
         if (r.kind === 'group' && r.is_admin) acts.appendChild(h('button', { class: 'btn btn-ghost btn-sm', type: 'button', text: 'Manage', onclick: function () { openHub('p=chat&a=manage&room=' + r.id); } }));
@@ -847,6 +1006,7 @@
           ta.addEventListener('input', function () { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 130) + 'px'; });
           pane.appendChild(form);
         } else { pane.appendChild(h('div', { class: 'chat-form muted small', text: '🔒 ' + (r.dm && r.dm.note ? r.dm.note : 'Only group admins can post in this channel.') })); }
+        if (startMem && r.kind !== 'dm') { clearTimers(); every(15000, loadRooms); openMemories(r, pane, function () { openRoom(id); }); return; }
         every(4000, function () {
           var stick = log.scrollHeight - log.scrollTop - log.clientHeight < 140;
           api('room', { params: { id: id, after: last } }).then(function (p) { if (p.ok && p.messages.length) { var ph = log.querySelector('p.muted'); if (ph) ph.remove(); p.messages.forEach(function (m) { add(m, stick); }); S.counts.messages = p.unread; paintCounts(); } });
@@ -855,7 +1015,7 @@
     }
     loadRooms();
     every(15000, loadRooms);
-    if (roomId) { openRoom(roomId); } else { pane.appendChild(h('div', { class: 'chat-empty' }, h('h2', { text: 'Your messages' }), h('p', { text: 'Choose a conversation on the left, or message someone from Connect.' }))); }
+    if (roomId) { openRoom(roomId, memFlag); } else { pane.appendChild(h('div', { class: 'chat-empty' }, h('h2', { text: 'Your messages' }), h('p', { text: 'Choose a conversation on the left, or message someone from Connect.' }))); }
   }
 
   /* ---------------------------------------------------------------- projects */
@@ -1042,7 +1202,7 @@
   }
   function viewTeamProfile(u, main) {
     var ti = u.team_info || {}, rows = [['Team', u.name], ['Type', ti.type ? ti.type.charAt(0).toUpperCase() + ti.type.slice(1) : ''], ['State', ti.state || ''], ['Established', ti.established_on ? new Date(ti.established_on + 'T00:00:00').toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : ''], ['Sign-in email', u.email]];
-    main.appendChild(h('div', { class: 'profile-top' }, avatar(u, 'xl'), h('div', null, h('h1', { text: u.name }), h('p', { class: 'muted', text: 'Team account' }))));
+    main.appendChild(h('div', { class: 'profile-top' }, zoomAvatar(u, 'xl'), h('div', null, h('h1', { text: u.name }), h('p', { class: 'muted', text: 'Team account' }))));
     main.appendChild(h('div', { class: 'form-card' }, h('h2', { text: 'Team details' }),
       h('dl', { class: 'kv' }, rows.filter(function (r) { return r[1]; }).map(function (r) { return h('div', { class: 'kv-row' }, h('dt', { text: r[0] }), h('dd', { text: r[1] })); })),
       ti.about ? h('p', { class: 'small', style: 'margin-top:10px', text: ti.about.length > 400 ? ti.about.slice(0, 400) + '…' : ti.about }) : null,
@@ -1068,7 +1228,7 @@
     var first = u.profile_complete === false;
     var btn = h('button', { class: 'btn btn-primary', type: 'submit', text: 'Save profile' });
     if (first) main.appendChild(h('div', { class: 'card complete-banner' }, h('strong', { text: 'Welcome! Please complete your profile to continue.' }), h('p', { class: 'muted small', text: 'Fill in every field below and add a profile picture. You can change them later.' })));
-    main.appendChild(h('div', { class: 'profile-top' }, avatar(u, 'xl'), h('div', null, h('h1', { text: u.name }), h('p', { class: 'muted', text: u.kind_label + (u.team ? ' · ' + u.team : '') + (u.member_code ? ' · ' + u.member_code : '') }))));
+    main.appendChild(h('div', { class: 'profile-top' }, zoomAvatar(u, 'xl'), h('div', null, h('h1', { text: u.name }), h('p', { class: 'muted', text: u.kind_label + (u.team ? ' · ' + u.team : '') + (u.member_code ? ' · ' + u.member_code : '') }))));
     main.appendChild(h('form', { class: 'form-card', onsubmit: function (e) {
       e.preventDefault(); busy(btn, true);
       var data = { name: f.name.value, headline: f.headline.value, phone: f.phone.value, linkedin: f.linkedin.value, bio: f.bio.value, organisation: f.organisation.value, date_of_birth: dob.value, open_to_work: open.checked ? 1 : 0, accept_dm: dm.checked ? 1 : 0 };
@@ -1088,14 +1248,15 @@
       } else if (!S.user.photo) { busy(btn, false); toast('Please add a profile photo.', 'error'); }
       else { saveData(); }
     } }, h('h2', { text: 'Your profile' }), field('Full name', f.name), field('Headline', f.headline), u.kind === 'partner' ? field('Organisation', f.organisation) : null, field('Phone', f.phone), field('Date of birth', dob, 'Day, month and year. It is never displayed to the public.'), field('LinkedIn', f.linkedin), field('About you', f.bio), field(u.photo ? 'Profile photo' : 'Profile photo (required)', photo, 'JPG, PNG or WEBP up to 8 MB.'),
-      ['member', 'alumni', 'advisor'].indexOf(u.kind) > -1 ? h('label', { class: 'switch', style: 'margin-bottom:14px' }, open, h('span', { text: 'Open to opportunities' })) : null,
-      h('label', { class: 'switch', style: 'margin-bottom:6px' }, dm, h('span', { text: 'Allow private chat' })), h('p', { class: 'help', style: 'margin:0 0 14px', text: 'Turn this off and nobody can start a private chat with you, except Enactus staff.' }), btn,
+      ['member', 'alumni', 'advisor'].indexOf(u.kind) > -1 ? h('label', { class: 'switch pf-switch' }, open, h('span', { text: 'Open to opportunities' })) : null,
+      h('label', { class: 'switch pf-switch' }, dm, h('span', { text: 'Allow private chat' })), h('p', { class: 'help pf-switch-help', text: 'Turn this off and nobody can start a private chat with you, except Enactus staff.' }), btn,
       h('p', { class: 'muted small', style: 'margin-top:10px', text: 'Your email (' + u.email + ') and phone number are never shown to other people.' })));
     var cur = pwField('pc', 'Current password'), p1 = pwField('pn', 'New password', 'new-password'), pbtn = h('button', { class: 'btn btn-primary', type: 'submit', text: 'Change password' });
     main.appendChild(h('form', { class: 'form-card', onsubmit: function (e) {
       e.preventDefault(); busy(pbtn, true);
       api('auth/password', { data: { current: cur.input.value, password: p1.input.value } }).then(function (d) { busy(pbtn, false); if (d.ok) { toast('Password changed.', 'ok'); cur.input.value = ''; p1.input.value = ''; } else { toast(d.error, 'error'); } });
     } }, h('h2', { text: 'Change password' }), cur.el, p1.el, h('p', { class: 'help', style: 'margin:-6px 0 12px', text: 'At least 10 characters with upper and lower case letters and a number.' }), pbtn));
+    main.appendChild(h('div', { class: 'form-card' }, h('h2', { text: 'My ID card' }), h('p', { class: 'muted small', text: 'See your Enactus Nigeria ID card status and request a new card if it expired, was lost or damaged.' }), h('button', { class: 'btn btn-soft', type: 'button', text: 'My ID card', onclick: function () { openHub('p=idcard'); } })));
     main.appendChild(h('div', { class: 'form-card' }, (u.is_team || u.is_staff) ? h('p', { style: 'margin-bottom:12px' }, h('button', { class: 'btn btn-soft', type: 'button', text: u.is_team ? 'Open the Team hub' : 'Open staff area', onclick: function () { openHub(u.is_team ? 'p=t_dashboard' : 'p=plus_resources'); } })) : null,
       h('button', { class: 'btn btn-danger', type: 'button', text: 'Sign out', onclick: function () { api('auth/logout', { data: {} }).then(function () { signOutLocal(); }); } })));
   }
@@ -1354,14 +1515,14 @@
         else if (p.relation === 'sent') acts.appendChild(h('button', { class: 'btn btn-ghost', disabled: true, text: 'Request sent' }));
         else if (p.relation === 'received') { var ab = h('button', { class: 'btn btn-primary', type: 'button', text: 'Accept request' }); ab.addEventListener('click', function () { busy(ab, true); api('connection/respond', { data: { id: p.connection_id, action: 'accept' } }).then(function (r) { busy(ab, false); if (r.ok) { ab.textContent = 'Connected'; ab.disabled = true; refreshCounts(); } }); }); acts.appendChild(ab); }
         else acts.appendChild(h('span', { class: 'badge badge-green', text: 'Connected' }));
-        acts.appendChild(h('button', { class: 'btn btn-ghost', type: 'button', text: 'Message', onclick: function () { messageUser(p.id); } }));
+        acts.appendChild(msgBtn(p, 'btn btn-ghost'));
       }
       if (p.linkedin) acts.appendChild(h('a', { class: 'btn btn-ghost', href: p.linkedin, target: '_blank', rel: 'noopener noreferrer', text: 'LinkedIn' }));
       if (!self) { var bb = h('button', { class: 'btn btn-quiet', type: 'button', text: 'Block' }); bb.addEventListener('click', function () { if (!confirm('Block ' + p.name + '? Neither of you will be able to message or connect with the other.')) return; busy(bb, true); api('block', { data: { user: p.id, on: 1 } }).then(function (x) { busy(bb, false); if (x.ok) { toast('Blocked.', 'ok'); location.hash = '#/connect'; } else { toast(x.error, 'error'); } }); }); acts.appendChild(bb); }
       var ti = p.team_info;
       box.appendChild(h('section', { class: 'pf-card' },
         h('div', { class: 'pf-cover' }),
-        h('div', { class: 'pf-head' }, h('div', { class: 'pf-photo' }, avatar(p, 'xl')),
+        h('div', { class: 'pf-head' }, h('div', { class: 'pf-photo' }, zoomAvatar(p, 'xl')),
           h('div', { class: 'pf-id' }, h('h1', { text: p.name }), p.headline ? h('p', { class: 'pf-headline', text: p.headline }) : null,
             h('p', { class: 'pf-meta' }, [p.kind_label, ti ? null : (p.organisation || null)].filter(Boolean).join(' · '), ti ? h('span', null, (p.kind_label ? ' · ' : ''), h('a', { href: '#/team/' + ti.id, text: ti.name })) : null,
               ' · ', h('strong', { text: String(p.connections || 0) }), ' connection' + (p.connections === 1 ? '' : 's')),
@@ -1388,7 +1549,7 @@
       if (t.rep_id && S.user && S.user.is_staff && t.rep_id !== S.user.id) acts.appendChild(h('button', { class: 'btn btn-ghost', type: 'button', text: 'Message team', onclick: function () { messageUser(t.rep_id); } }));
       box.appendChild(h('section', { class: 'pf-card' },
         h('div', { class: 'pf-cover' + (t.cover ? ' has-img' : ''), style: t.cover ? 'background-image:url("' + String(t.cover).replace(/"/g, '%22') + '")' : '' }),
-        h('div', { class: 'pf-head' }, h('div', { class: 'pf-photo pf-logo' }, avatar({ name: t.name, photo: t.logo }, 'xl')),
+        h('div', { class: 'pf-head' }, h('div', { class: 'pf-photo pf-logo' }, zoomAvatar({ name: t.name, photo: t.logo }, 'xl')),
           h('div', { class: 'pf-id' }, h('h1', { text: t.name }), h('p', { class: 'pf-meta', text: meta }),
             h('p', { class: 'pf-meta' }, h('strong', { text: String(t.members) }), ' member' + (t.members === 1 ? '' : 's'), ' · ', h('strong', { text: String(t.projects_count) }), ' project' + (t.projects_count === 1 ? '' : 's'))),
           acts)));
@@ -1415,7 +1576,7 @@
   /* ---------------------------------------------------------------- router + start */
   var ROUTES = [
     [/^\/login$/, viewLogin, true], [/^\/forgot$/, viewForgot, true], [/^\/reset\/([a-f0-9]{64})$/, viewReset, true], [/^\/welcome$/, viewWelcome, false],
-    [/^\/?$/, function () { viewFeed('all'); }], [/^\/announcements$/, function () { viewFeed('announcements'); }], [/^\/post\/\d+$/, function () { viewFeed('all'); }], [/^\/connect(?:\/(requests|friends))?$/, viewConnect], [/^\/groups$/, function () { location.replace('#/messages'); }], [/^\/groups\/new$/, viewNewGroup], [/^\/groups\/(\d+)$/, viewGroup], [/^\/messages(?:\/(\d+))?$/, viewMessages],
+    [/^\/?$/, function () { viewFeed('all'); }], [/^\/announcements$/, function () { viewFeed('announcements'); }], [/^\/post\/\d+$/, function () { viewFeed('all'); }], [/^\/connect(?:\/(requests|friends))?$/, viewConnect], [/^\/groups$/, function () { location.replace('#/messages'); }], [/^\/messages\/(\d+)\/memories$/, function (id) { viewMessages(id, true); }], [/^\/groups\/new$/, viewNewGroup], [/^\/groups\/(\d+)$/, viewGroup], [/^\/messages(?:\/(\d+))?$/, viewMessages],
     [/^\/projects$/, viewProjects], [/^\/projects\/(\d+)$/, viewProject], [/^\/jobs$/, viewJobs], [/^\/resources$/, viewResources], [/^\/events$/, viewEvents],
     [/^\/approvals(?:\/(members|roles|projects|posts))?$/, function (tab) { openHub('p=approvals&tab=' + (tab || 'projects')); location.replace('#/'); }], [/^\/u\/(\d+)$/, viewPerson], [/^\/team\/(\d+)$/, viewTeamPage], [/^\/notifications$/, viewNotifications], [/^\/mail$/, viewMail], [/^\/me$/, viewProfile], [/^\/more$/, viewMore]
   ];
@@ -1441,6 +1602,14 @@
   }
   document.addEventListener('change', function (e) { var t = e.target; if (t && t.matches && t.matches('.search-row select')) t.classList.toggle('is-set', t.value !== ''); });
   S.nav = navigate;
+  /* any picture on Plus opens full size when clicked (not logos, icons, or pictures that are links/buttons) */
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'IMG' || e.defaultPrevented) return;
+    if (t.closest('a,button,.is-link,.lightbox,.mv-viewer,[data-nozoom],input,label,select,.brand-logo,.app-top,.auth-hero')) return;
+    if ((t.clientWidth || 0) < 60) return;
+    lightbox(t.currentSrc || t.src);
+  });
   window.addEventListener('hashchange', navigate);
   document.addEventListener('visibilitychange', function () { if (!document.hidden && S.token) refreshCounts(); });
   api('public').then(function (d) {

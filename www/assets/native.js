@@ -4,10 +4,15 @@
   var C = window.Capacitor, isCap = !!(C && C.isNativePlatform && C.isNativePlatform());
   var isTauri = !!(window.__TAURI_INTERNALS__ || window.__TAURI__);
   var platform = isCap ? 'mobile' : (isTauri ? 'desktop' : 'web');
-  var root = document.documentElement, CFG = window.PLUS_CONFIG || {};
-  var ONB_KEY = 'plus_onboarded_v1', CACHE_KEY = 'plus_slides_cache_v1';
+  var root = document.documentElement;
+  var ONB_KEY = 'plus_onboarded_v1', CACHE_KEY = 'plus_slides_cache_v1', OVERRIDE_KEY = 'plus_api_override';
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+  window.PLUS_CONFIG = window.PLUS_CONFIG || {};
+  var DEFAULT_API = window.PLUS_CONFIG.api || '';
+  if (lsGet(OVERRIDE_KEY)) { window.PLUS_CONFIG.api = lsGet(OVERRIDE_KEY); }
+  var CFG = window.PLUS_CONFIG;
   function plug(name) { try { return (C.Plugins && C.Plugins[name]) || (C.registerPlugin && C.registerPlugin(name)); } catch (e) { return null; } }
   function invoke(cmd, args) { var i = window.__TAURI_INTERNALS__ || (window.__TAURI__ && window.__TAURI__.core); return i.invoke(cmd, args || {}); }
   function $(s) { return document.querySelector(s); }
@@ -17,6 +22,39 @@
   if (platform === 'web' && !/[?&]native=1/.test(location.search)) { return; } // plain website: leave everything as it was
   root.classList.add('native', 'is-' + platform);
   var BASE = String(CFG.api || '').replace(/api\/index\.php.*$/, '');
+
+  /* ---------- network layer: the apps talk to the server natively, so website CORS rules cannot block them ---------- */
+  var rawFetch = window.fetch.bind(window);
+  function b64FromBytes(bytes) { var s = '', CH = 0x8000; for (var i = 0; i < bytes.length; i += CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH)); return btoa(s); }
+  function bytesFromB64(b) { var s = atob(b || ''), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+  function plainHeaders(h) { var o = {}; if (!h) return o; if (typeof h.forEach === 'function' && !Array.isArray(h)) { h.forEach(function (v, k) { o[k] = v; }); } else { Object.keys(h).forEach(function (k) { o[k] = h[k]; }); } return o; }
+  function viaRust(url, init) {
+    init = init || {}; var headers = plainHeaders(init.headers), body = init.body, p;
+    if (body == null) p = Promise.resolve(null);
+    else if (typeof body === 'string') p = Promise.resolve(b64FromBytes(new TextEncoder().encode(body)));
+    else { var rq = new Response(body); var ct = rq.headers.get('content-type'); if (ct) headers['Content-Type'] = ct; p = rq.arrayBuffer().then(function (ab) { return b64FromBytes(new Uint8Array(ab)); }); }
+    return p.then(function (b64) {
+      return invoke('api_fetch', { req: { url: url, method: init.method || 'GET', headers: headers, body_b64: b64 } });
+    }).then(function (r) {
+      var nobody = r.status === 204 || r.status === 205 || r.status === 304;
+      return new Response(nobody ? null : bytesFromB64(r.body_b64), { status: r.status, headers: { 'Content-Type': r.content_type || 'application/json' } });
+    }, function (e) { throw new TypeError(String(e)); });
+  }
+  function viaCapHttp(url, init) {
+    init = init || {}; var H = plug('CapacitorHttp'); if (!H || (init.body != null && typeof init.body !== 'string')) return Promise.reject(new TypeError('no native http'));
+    var headers = plainHeaders(init.headers), data;
+    if (typeof init.body === 'string') { try { data = JSON.parse(init.body); } catch (e) { data = init.body; } }
+    return H.request({ url: url, method: init.method || 'GET', headers: headers, data: data, responseType: 'text' }).then(function (r) {
+      var hd = r.headers || {}, ct = hd['Content-Type'] || hd['content-type'] || 'application/json';
+      return new Response(typeof r.data === 'string' ? r.data : JSON.stringify(r.data), { status: r.status, headers: { 'Content-Type': ct } });
+    });
+  }
+  window.fetch = function (input, init) {
+    var url = typeof input === 'string' ? input : (input && input.url) || '';
+    if (!CFG.api || url.indexOf(CFG.api) !== 0) return rawFetch(input, init);
+    if (isTauri) return viaRust(url, init);
+    return rawFetch(input, init).catch(function (err) { if (isCap) return viaCapHttp(url, init).catch(function () { throw err; }); throw err; });
+  };
 
   /* ---------- bridge used by app.js ---------- */
   function toBase64(blob) {
@@ -90,32 +128,31 @@
     try { var SP = plug('SplashScreen'); if (SP) SP.hide({ fadeOutDuration: 200 }); } catch (e) {}
   }
 
-  /* ---------- onboarding slides come from the server (Site settings → EnactusNG Plus → sign-in slides) ---------- */
-  function abs(u) { u = String(u || ''); if (!u) return ''; if (/^https?:\/\//i.test(u)) return u; return BASE + u.replace(/^\//, ''); }
-  function fetchSlides() {
+  /* ---------- server check + slide texts (photos are built into the app) ---------- */
+  function getPublic() {
     var cached = null; try { cached = JSON.parse(lsGet(CACHE_KEY) || 'null'); } catch (e) {}
     return new Promise(function (res) {
-      var c = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (c) c.abort(); res(null); }, 6000);
-      fetch(CFG.api + '?r=public', { cache: 'no-store', signal: c && c.signal }).then(function (r) { return r.json(); }).then(function (d) {
-        clearTimeout(t); if (d && d.ok && d.slides) { lsSet(CACHE_KEY, JSON.stringify(d.slides)); res(d.slides); } else res(null);
-      }).catch(function () { clearTimeout(t); res(null); });
-    }).then(function (s) { return s || cached; });
+      var c = window.AbortController ? new AbortController() : null, t = setTimeout(function () { if (c) c.abort(); res({ ok: false, slides: cached }); }, 9000);
+      window.fetch(CFG.api + '?r=public', { cache: 'no-store', signal: c && c.signal }).then(function (r) { return r.json(); }).then(function (d) {
+        clearTimeout(t); if (d && d.ok) { if (d.slides) lsSet(CACHE_KEY, JSON.stringify(d.slides)); res({ ok: true, slides: d.slides || cached }); } else res({ ok: false, slides: cached });
+      }).catch(function () { clearTimeout(t); res({ ok: false, slides: cached }); });
+    });
   }
-  function loadImg(src) {
-    return new Promise(function (res) { var i = new Image(), t = setTimeout(function () { res(false); }, 7000); i.onload = function () { clearTimeout(t); res(true); }; i.onerror = function () { clearTimeout(t); res(false); }; i.src = src; });
+  function applyTexts(slides, els) {
+    if (!slides) return;
+    els.forEach(function (el, i) { var s = slides[i]; if (!s) return; if (s.title) el.querySelector('h2').textContent = s.title; if (s.text) el.querySelector('p').textContent = s.text; });
   }
-  function applySlides(slides, els) {
-    if (!slides) return Promise.resolve();
-    return Promise.all(els.map(function (el, i) {
-      var s = slides[i]; if (!s) return null;
-      var h2 = el.querySelector('h2'), p = el.querySelector('p'), art = el.querySelector('.b-art');
-      if (s.title) h2.textContent = s.title; if (s.text) p.textContent = s.text;
-      var src = abs(s.image); if (!src) return null;
-      return loadImg(src).then(function (ok) {
-        if (!ok) return; art.classList.add('photo'); art.innerHTML = '';
-        var im = document.createElement('img'); im.className = 'b-photo'; im.alt = ''; im.draggable = false; im.src = src; art.appendChild(im);
-      });
-    }));
+  function hostOf(u) { try { return new URL(u).host; } catch (e) { return u; } }
+  function setupConn(retry) {
+    var box = $('#b-conn'); if (!box) return function () {};
+    var addr = box.querySelector('.addr'), input = $('#b-conn-input'), change = $('#b-conn-change');
+    $('#b-conn-host').textContent = hostOf(CFG.api);
+    $('#b-conn-retry').onclick = function () { if (addr.hidden) { box.classList.remove('show'); retry(); return; }
+      var v = (input.value || '').trim().replace(/\/+$/, '').replace(/\/api\/index\.php.*$/, '');
+      if (!/^https:\/\/[a-z0-9.-]+(:\d+)?(\/[^\s]*)?$/i.test(v)) { input.style.borderColor = '#ED341C'; return; }
+      lsSet(OVERRIDE_KEY, v + '/api/index.php'); location.reload(); };
+    change.onclick = function () { addr.hidden = false; input.value = hostOf(CFG.api) ? 'https://' + hostOf(CFG.api) : ''; $('#b-conn-retry .lbl').textContent = 'Save and reconnect'; change.textContent = 'Use the original address'; change.onclick = function () { lsDel(OVERRIDE_KEY); location.reload(); }; };
+    return function show() { box.classList.add('show'); };
   }
 
   /* ---------- boot: splash -> onboarding (first launch) -> app ---------- */
@@ -125,7 +162,8 @@
     var slides = [].slice.call(document.querySelectorAll('.b-slide')), dots = [].slice.call(document.querySelectorAll('.b-dot'));
     var track = $('#b-track'), vp = $('#b-vp'), next = $('#b-next'), skip = $('#b-skip'), idx = 0;
     var first = !(lsGet(ONB_KEY) || lsGet('plus_token'));
-    var slidesP = first ? fetchSlides().then(function (s) { return applySlides(s, slides); }) : Promise.resolve();
+    var pubP = getPublic(), connShow = setupConn(function () { location.reload(); });
+    pubP.then(function (r) { if (first) applyTexts(r.slides, slides); });
     function show(el) { [splash, onb].forEach(function (s) { s.classList.toggle('show', s === el); }); }
     function dismiss() { boot.classList.add('gone'); setTimeout(function () { boot.remove(); }, 800); }
     function finish() { lsSet(ONB_KEY, '1'); onb.classList.remove('show'); dismiss(); }
@@ -159,8 +197,9 @@
         var wait = function () { if (appReady() || Date.now() - started > 9000) dismiss(); else setTimeout(wait, 120); };
         wait();
       } else {                                        // first launch: give the slides (and their photos) a moment, then show them
-        Promise.race([slidesP, sleep(2500)]).then(function () { show(onb); });
+        Promise.race([pubP, sleep(1800)]).then(function () { show(onb); });
       }
+      pubP.then(function (r) { if (!r.ok && navigator.onLine !== false) connShow(); });
     });
   });
 })();

@@ -21,3 +21,11 @@ Everything is built by GitHub Actions – you never run a command.
 ## Icon, logo and welcome slides
 - The app icon, splash and logo were made from your uploaded Plus favicon and logo. To change them replace `branding/*.png` and `www/assets/img/logo.png` / `favicon.png`.
 - The 3 welcome slides load **live from your server** (Site settings → EnactusNG Plus → sign-in slides: picture, headline, text), so changing them on the website changes the app. If the phone is offline on first launch, built-in illustrations are shown instead.
+
+## If the app says "Can't reach EnactusNG Plus"
+The app shows the server address it is using. Tap **Change server address**, type the address you use to open EnactusNG Plus in a browser (for example `https://plus.enactus.org.ng`) and save – no rebuild is needed. To make a new address permanent, edit `plusUrl` in `app.config.json`.
+
+## What's new (v56 refresh)
+- Updated to the latest EnactusNG Plus: new **My ID card** card in Settings/Profile (opens the Team hub ID page), plus all recent fixes.
+- Each build gets a higher version number, so the new APK installs over the old app (no uninstall needed).
+- Upload the v56 website files first, then push this folder to GitHub to build.

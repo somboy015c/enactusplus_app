@@ -146,3 +146,21 @@ html.native.kb .app-body{padding-bottom:20px}
 #net-banner{position:fixed;left:50%;top:calc(var(--sat) + 10px);transform:translate(-50%,-160%);z-index:9000;display:flex;align-items:center;gap:10px;padding:10px 18px;border-radius:999px;background:#18202C;color:#fff;font-weight:700;font-size:.85rem;box-shadow:0 12px 28px -10px rgba(0,0,0,.5);transition:transform .45s var(--spring);max-width:92vw}
 #net-banner.show{transform:translate(-50%,0)}
 #net-banner i{width:9px;height:9px;border-radius:50%;background:#FFC11F;animation:bPop 1.2s infinite}
+
+/* login page: show the logo (the website hides it on small screens) */
+html.native .auth-box::before{content:"";display:block;height:58px;margin:0 0 18px;background:url(img/logo.png) left center/contain no-repeat}
+/* connection problem screen */
+#b-conn{position:fixed;inset:0;z-index:10000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(24,32,44,.55);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#b-conn.show{display:flex;animation:bIn .3s var(--ease)}
+#b-conn .card{width:min(420px,100%);background:#fff;border-radius:28px;padding:28px 24px 20px;text-align:center;box-shadow:0 30px 60px -20px rgba(0,0,0,.5);animation:bRise .45s var(--ease) both}
+#b-conn .ico{width:84px;height:84px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:#FFF1C9}
+#b-conn .ico svg{width:42px;height:42px;stroke:#B26A00}
+#b-conn h2{margin:0 0 8px;font-size:1.3rem;color:#18202C}
+#b-conn p{margin:0 0 8px;color:#667085;line-height:1.5;font-size:.95rem}
+#b-conn .host{font-size:.8rem;word-break:break-all}#b-conn .host b{color:#18202C}
+#b-conn .addr{margin:10px 0 4px;text-align:left}
+#b-conn .addr input{width:100%;height:48px;padding:0 14px;font:inherit;border-radius:14px;border:1.5px solid #E4E7EC;background:#F7F8FA}
+#b-conn .addr small{display:block;margin-top:6px;color:#667085;font-size:.76rem}
+#b-conn .row{display:flex;justify-content:center;margin:14px 0 4px}
+#b-conn .b-btn.ghost{margin:0 auto}
+.b-art.photo{width:min(360px,84vw)}
